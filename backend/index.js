@@ -18,8 +18,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/v1/topics', topicRoutes);
-app.use('/api/v1/questions', questionRoutes);
+app.use('/topics', topicRoutes);
+app.use('/questions', questionRoutes);
 
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, '../../client/dist');
