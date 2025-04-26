@@ -6,7 +6,7 @@ import axios from 'axios'; // Assuming you have axios configured
 
 // --- API Call Setup ---
 // Adjust the base URL and endpoint as needed for your backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://codetrack-backend-qfbz.onrender.com';
 
 const addTopicAPI = async (topicData) => {
     // The backend expects an object, e.g., { name: 'topicName' }

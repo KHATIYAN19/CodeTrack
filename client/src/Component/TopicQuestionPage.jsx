@@ -4,14 +4,14 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
     FaAngleLeft, FaSpinner, FaExclamationTriangle, FaExternalLinkAlt, FaCheck, FaTag, FaBuilding,
     FaSyncAlt, FaChartBar, FaThumbsUp, FaListOl, FaLaptopCode, FaCheckCircle, FaHourglassHalf,
-    FaTrashAlt, // Added Trash icon
-    FaUndo // Added Undo icon for Unmark All
+    FaTrashAlt,
+    FaUndo 
 } from 'react-icons/fa';
 import { FaUniversity,FaCode  } from 'react-icons/fa';
 
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://codetrack-backend-qfbz.onrender.com';
 
 const fetchQuestionsByTopicAPI = async (topicName) => {
     return axios.get(`${API_BASE_URL}/questions`, { params: { topic: topicName, limit: 1000 } });

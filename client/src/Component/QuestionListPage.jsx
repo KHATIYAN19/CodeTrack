@@ -10,7 +10,7 @@ import _ from 'lodash'; // Assuming lodash is installed for debounce
 
 // --- Constants ---
 const ITEMS_PER_PAGE = 10;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://codetrack-backend-qfbz.onrender.com';
 // Define the fixed difficulty levels here
 const DIFFICULTY_LEVELS = ['Easy', 'Medium', 'Hard'];
 

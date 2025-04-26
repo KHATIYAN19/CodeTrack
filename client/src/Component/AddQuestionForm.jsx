@@ -5,7 +5,7 @@ import { FaPlus, FaSpinner, FaExclamationCircle, FaTag, FaLink, FaCheck, FaListA
 import axios from 'axios';
 
 // --- API Call Setup (Remains the same) ---
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://codetrack-backend-qfbz.onrender.com';
 
 const fetchTopicsAPI = async () => {
     return axios.get(`${API_BASE_URL}/topics`);
