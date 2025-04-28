@@ -1,4 +1,4 @@
-const taskscheduler=require("../utils/taskScheduler")
+const startTaskScheduler=require("../utils/taskScheduler")
 const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
@@ -7,7 +7,7 @@ const connectDB = async () => {
       // useNewUrlParser: true,
       // useUnifiedTopology: true,
     });
-    taskscheduler();
+    startTaskScheduler();
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (err) {
     console.error(`Error connecting to MongoDB: ${err.message}`);

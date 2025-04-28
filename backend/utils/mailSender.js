@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 require("dotenv").config();
+
 const createTransporter = () => {
   return nodemailer.createTransport({
     service: 'gmail',  
@@ -9,15 +10,18 @@ const createTransporter = () => {
     }
   });
 };
-const sendEmail = (toEmail, subject, text,htmlContent) => {
+
+const sendMail = (toEmail, subject, text, htmlContent) => {
   const transporter = createTransporter();  
+
   const mailOptions = {
     from: 'placementconnect9@gmail.com',  
     to: toEmail,                 
     subject: subject,            
-    text: text  ,
-    html:htmlContent              
+    text: text,  
+    html: htmlContent  
   };
+
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.log('Error sending email: ', error);
@@ -27,5 +31,4 @@ const sendEmail = (toEmail, subject, text,htmlContent) => {
   });
 };
 
-module.exports=sendEmail;
-
+module.exports = sendMail;

@@ -28,11 +28,9 @@ const startTaskScheduler = () => {
                         </div>
                     `;
 
-                    await sendMail({
-                        to: task.email,
-                        subject: `⏰ Reminder: Your Task "${task.heading}" is Coming Up!`,
-                        html: htmlContent
-                    });
+                    const text = `Reminder: Your task "${task.heading}" is scheduled soon!\n\nTask Time: ${taskTime.toLocaleString()}\nRemaining Time: 10 minutes\nDetails: ${task.content}`;
+
+                    await sendMail(task.email, `⏰ Reminder: Your Task "${task.heading}" is Coming Up!`, text, htmlContent);
 
                     task.beforeReminderSent = true;
                     await task.save();
@@ -52,11 +50,9 @@ const startTaskScheduler = () => {
                         </div>
                     `;
 
-                    await sendMail({
-                        to: task.email,
-                        subject: `🚀 Now: Your Task "${task.heading}" Has Started!`,
-                        html: htmlContent
-                    });
+                    const text = `Your task "${task.heading}" is starting NOW!\n\nTask Time: ${taskTime.toLocaleString()}\nDetails: ${task.content}`;
+
+                    await sendMail(task.email, `🚀 Now: Your Task "${task.heading}" Has Started!`, text, htmlContent);
 
                     await Task.findByIdAndDelete(task._id);
                 }
