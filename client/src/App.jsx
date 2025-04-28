@@ -6,6 +6,7 @@ import QuestionListPage from './Component/QuestionListPage'
 import TopicListPage from './Component/TopicListPage'
 import TopicQuestionsPage from './Component/TopicQuestionPage'
 import Navbar from './Component/Navbar'
+import TasksPage from './Component/TaskPage'
 import './App.css'
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
          <Route path="add-question" element={<AddQuestionForm/>}/>
           <Route path="/add-topic" element={<AddTopicForm/>}/>
          <Route path="/problems" element={<QuestionListPage/>}/>
+         <Route path="/tasks" element={<TasksPage/>}/>
 
 
          <Route path="/topics" element={<TopicListPage />} />

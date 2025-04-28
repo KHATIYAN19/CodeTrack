@@ -55,6 +55,9 @@ function Navbar() {
                             <NavLink to="/add-question" className={getNavLinkClass}>
                                 <FaPlusCircle className="mr-1.5 h-4 w-4" /> Add Question
                             </NavLink>
+                            <NavLink to="/tasks" className={getNavLinkClass}>
+                                <FaPlusCircle className="mr-1.5 h-4 w-4" />  Tasks
+                            </NavLink>
                         </div>
                     </div>
 
