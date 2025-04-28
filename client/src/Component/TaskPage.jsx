@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { z } from 'zod';
 import toast, { Toaster } from 'react-hot-toast';
-import { FaEdit, FaTrashAlt, FaCalendarAlt, FaInfoCircle } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaCalendarAlt, FaInfoCircle, FaSpinner } from 'react-icons/fa'; // Added FaSpinner
 import { format, parseISO, isFuture, isPast, addYears, formatDistanceToNow, isValid } from 'date-fns';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://codetrack-backend-qfbz.onrender.com';
@@ -32,20 +32,11 @@ const taskSchema = z.object({
     }, { message: 'Deadline must be within one year from now' }),
 });
 
-function addDays(date, days) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-function addHours(date, hours) {
-    const result = new Date(date);
-    result.setHours(result.getHours() + hours);
-    return result;
-}
-
 const TasksPage = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false); // State for disabling buttons
+  const [isUpdating, setIsUpdating] = useState(false); // State for disabling update button
   const [formData, setFormData] = useState({ heading: '', content: '', time: '' });
   const [errors, setErrors] = useState({});
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -83,10 +74,11 @@ const TasksPage = () => {
     setLoading(true);
     const toastId = toast.loading('Fetching tasks...');
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/tasks`);
-      if (Array.isArray(res.data)) {
-        setTasks(res.data);
-        toast.success('Tasks loaded successfully!', { id: toastId });
+      const res = await axios.get(`${API_BASE_URL}/tasks`); 
+
+      if (res.data && res.data.success && Array.isArray(res.data.data)) {
+        setTasks(res.data.data); 
+        toast.success(res.data.message || 'Tasks loaded successfully!', { id: toastId });
       } else {
         console.error('Unexpected response format:', res.data);
         toast.error('Failed to load tasks: Unexpected format.', { id: toastId });
@@ -94,8 +86,9 @@ const TasksPage = () => {
       }
     } catch (error) {
       console.error('Error fetching tasks:', error);
-      toast.error(`Error fetching tasks: ${error.message}.`, { id: toastId });
-      setTasks([]);
+      const message = error.response?.data?.message || error.message || 'An unknown error occurred';
+      toast.error(`Error fetching tasks: ${message}.`, { id: toastId });
+      setTasks([]); 
     } finally {
       setLoading(false);
     }
@@ -128,37 +121,43 @@ const TasksPage = () => {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm(formData, taskSchema, setErrors)) return;
+
+    setIsSubmitting(true); 
     const dataToSend = {
         ...formData,
         time: new Date(formData.time).toISOString()
     };
-    const creationPromise = axios.post(`${API_BASE_URL}/api/tasks`, dataToSend);
-    toast.promise(
-      creationPromise,
-      {
-        loading: 'Creating task...',
-        success: (res) => {
-          const newTask = res.data;
-          setTasks((prev) => [newTask, ...prev]);
-          setFormData({ heading: '', content: '', time: '' });
-          setErrors({});
-          return 'Task created successfully!';
-        },
-        error: (err) => {
-          console.error('Error creating task:', err);
-          const errorMessage = err.response?.data?.message || err.message || 'Failed to create task.';
-          if (err.response?.data?.errors) {
-             const backendErrors = Object.entries(err.response.data.errors).reduce((acc, [key, value]) => {
-                acc[key] = Array.isArray(value) ? value : [value];
-                return acc;
-             }, {});
-             setErrors(backendErrors);
-          }
-          return `Error: ${errorMessage}`;
-        },
-      }
-    );
+
+    const toastId = toast.loading('Creating task...');
+    try {
+        const res = await axios.post(`${API_BASE_URL}/tasks`, dataToSend); 
+
+        if (res.data && res.data.success && res.data.data) {
+            const newTask = res.data.data;
+            setTasks((prev) => [newTask, ...prev]);
+            setFormData({ heading: '', content: '', time: '' });
+            setErrors({});
+            toast.success(res.data.message || 'Task created successfully!', { id: toastId });
+        } else {
+            console.error("Create task response error:", res.data);
+            toast.error(res.data?.message || 'Failed to create task: Unexpected response.', { id: toastId });
+        }
+    } catch (err) {
+        console.error('Error creating task:', err);
+        const errorMessage = err.response?.data?.message || err.message || 'Failed to create task.';
+        if (err.response?.data?.errors) {
+           const backendErrors = Object.entries(err.response.data.errors).reduce((acc, [key, value]) => {
+              acc[key] = Array.isArray(value) ? value : [value];
+              return acc;
+           }, {});
+           setErrors(backendErrors);
+        }
+        toast.error(`Error: ${errorMessage}`, { id: toastId });
+    } finally {
+        setIsSubmitting(false); // Re-enable button
+    }
   };
+
 
   const openUpdateModal = (task) => {
     setSelectedTask(task);
@@ -189,53 +188,59 @@ const TasksPage = () => {
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     if (!selectedTask || !validateForm(updateFormData, taskSchema, setUpdateErrors)) return;
+
+    setIsUpdating(true); // Disable button
     const dataToSend = {
         ...updateFormData,
         time: new Date(updateFormData.time).toISOString()
     };
-    const updatePromise = axios.put(`${API_BASE_URL}/api/tasks/${selectedTask._id}`, dataToSend);
-    toast.promise(
-      updatePromise,
-      {
-        loading: 'Updating task...',
-        success: (res) => {
-           const updatedTask = {
-                ...selectedTask,
-                ...dataToSend
-            };
-          setTasks((prev) =>
-            prev.map((task) => (task._id === selectedTask._id ? updatedTask : task))
-          );
-          closeUpdateModal();
-          return 'Task updated successfully!';
-        },
-        error: (err) => {
-          console.error('Error updating task:', err);
-           const errorMessage = err.response?.data?.message || err.message || 'Failed to update task.';
-           if (err.response?.data?.errors) {
-             const backendErrors = Object.entries(err.response.data.errors).reduce((acc, [key, value]) => {
-                acc[key] = Array.isArray(value) ? value : [value];
-                return acc;
-             }, {});
-             setUpdateErrors(backendErrors);
-           }
-          return `Error: ${errorMessage}`;
-        },
-      }
-    );
+
+    const toastId = toast.loading('Updating task...');
+    try {
+        const res = await axios.put(`${API_BASE_URL}/tasks/${selectedTask._id}`, dataToSend); 
+
+        if (res.data && res.data.success) {
+             const updatedTask = { 
+                  ...selectedTask,
+                  ...dataToSend
+              };
+            setTasks((prev) =>
+              prev.map((task) => (task._id === selectedTask._id ? updatedTask : task))
+            );
+            closeUpdateModal();
+            toast.success(res.data.message || 'Task updated successfully!', { id: toastId });
+        } else {
+             console.error("Update task response error:", res.data);
+             toast.error(res.data?.message || 'Failed to update task: Unexpected response.', { id: toastId });
+        }
+    } catch (err) {
+        console.error('Error updating task:', err);
+         const errorMessage = err.response?.data?.message || err.message || 'Failed to update task.';
+         if (err.response?.data?.errors) {
+           const backendErrors = Object.entries(err.response.data.errors).reduce((acc, [key, value]) => {
+              acc[key] = Array.isArray(value) ? value : [value];
+              return acc;
+           }, {});
+           setUpdateErrors(backendErrors);
+         }
+         toast.error(`Error: ${errorMessage}`, { id: toastId });
+    } finally {
+        setIsUpdating(false); 
+    }
   };
 
   const confirmDeleteTask = async () => {
     if (!selectedTask) return;
-    const deletePromise = axios.delete(`${API_BASE_URL}/api/tasks/${selectedTask._id}`);
+
+    const deletePromise = axios.delete(`${API_BASE_URL}/tasks/${selectedTask._id}`); 
     toast.promise(
       deletePromise,
       {
         loading: 'Deleting task...',
-        success: () => {
+        success: (res) => { // Check response if needed
           setTasks((prev) => prev.filter(task => task._id !== selectedTask._id));
           closeDeleteModal();
-          return 'Task deleted successfully!';
+          return res.data?.message || 'Task deleted successfully!';
         },
         error: (err) => {
           console.error('Error deleting task:', err);
@@ -255,6 +260,7 @@ const TasksPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8 flex flex-col items-center">
       <Toaster position="top-right" reverseOrder={false} containerClassName="mt-4 mr-4"/>
+
       <div className="w-full max-w-3xl">
         <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
           <h2 className="text-2xl font-bold text-center text-gray-800 mb-6 border-b pb-3">Create New Task</h2>
@@ -269,6 +275,7 @@ const TasksPage = () => {
                 onChange={(e) => handleInputChange(e, setFormData, setErrors, errors)}
                 placeholder="e.g., Project Proposal Deadline"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:outline-none transition duration-150 ease-in-out"
+                disabled={isSubmitting} // Disable input during submission
               />
               {renderError(errors.heading)}
             </div>
@@ -283,9 +290,11 @@ const TasksPage = () => {
                 placeholder="Describe the task details..."
                 rows="4"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:outline-none transition duration-150 ease-in-out"
+                disabled={isSubmitting} // Disable input during submission
               />
                {renderError(errors.content)}
             </div>
+
             <div>
               <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
                <div className="relative">
@@ -295,17 +304,26 @@ const TasksPage = () => {
                     name="time"
                     value={formData.time}
                     onChange={(e) => handleInputChange(e, setFormData, setErrors, errors)}
+                    min={formatDateTimeLocal(new Date())}
+                    max={formatDateTimeLocal(addYears(new Date(), 1))}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:outline-none transition duration-150 ease-in-out appearance-none"
+                    disabled={isSubmitting} // Disable input during submission
                   />
                   <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                </div>
                {renderError(errors.time)}
             </div>
+
             <button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out transform hover:scale-105 active:scale-100"
+              disabled={isSubmitting} // Disable button when submitting
+              className="w-full flex justify-center items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out transform hover:scale-105 active:scale-100 disabled:opacity-70 disabled:cursor-not-allowed disabled:scale-100"
             >
-              Add Task
+              {isSubmitting ? (
+                  <FaSpinner className="animate-spin mr-2" /> // Show spinner when submitting
+              ) : (
+                 'Add Task'
+              )}
             </button>
           </form>
         </div>
@@ -367,6 +385,7 @@ const TasksPage = () => {
                    value={updateFormData.heading}
                    onChange={(e) => handleInputChange(e, setUpdateFormData, setUpdateErrors, updateErrors)}
                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:outline-none"
+                   disabled={isUpdating} // Disable during update
                  />
                  {renderError(updateErrors.heading)}
                </div>
@@ -379,6 +398,7 @@ const TasksPage = () => {
                    onChange={(e) => handleInputChange(e, setUpdateFormData, setUpdateErrors, updateErrors)}
                    rows="4"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:outline-none"
+                    disabled={isUpdating} // Disable during update
                  />
                  {renderError(updateErrors.content)}
                </div>
@@ -391,15 +411,31 @@ const TasksPage = () => {
                       name="time"
                       value={updateFormData.time}
                       onChange={(e) => handleInputChange(e, setUpdateFormData, setUpdateErrors, updateErrors)}
+                      min={formatDateTimeLocal(new Date())}
+                      max={formatDateTimeLocal(addYears(new Date(), 1))}
                       className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:outline-none appearance-none"
+                      disabled={isUpdating} // Disable during update
                     />
                     <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                  </div>
                  {renderError(updateErrors.time)}
                </div>
                <div className="flex justify-end space-x-3 pt-4">
-                 <button type="button" onClick={closeUpdateModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition duration-150 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
-                 <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500">Update Task</button>
+                 <button
+                    type="button"
+                    onClick={closeUpdateModal}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition duration-150 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                    disabled={isUpdating} // Also disable cancel during update
+                 >
+                    Cancel
+                 </button>
+                 <button
+                    type="submit"
+                    disabled={isUpdating} // Disable button when updating
+                    className="px-4 py-2 w-28 flex justify-center items-center bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                 >
+                    {isUpdating ? <FaSpinner className="animate-spin" /> : 'Update Task'}
+                 </button>
                </div>
              </form>
         </Modal>

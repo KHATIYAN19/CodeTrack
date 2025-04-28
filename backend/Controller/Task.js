@@ -39,13 +39,13 @@ const getAllTasks = async (req, res) => {
 const updateTask = async (req, res) => {
     try {
         const { id } = req.params;
-        const { heading, content, time, email } = req.body;
-        if (!heading || !content || !time || !email) {
+        const { heading, content, time } = req.body;
+        if (!heading || !content || !time ) {
             return sendResponse(res, false, 'All fields (heading, content, time, email) are required to update', null, 400);
         }
         const updatedTask = await Task.findByIdAndUpdate(
             id,
-            { heading, content, time, email },
+            { heading, content, time },
             { new: true }
         );
         if (!updatedTask) {

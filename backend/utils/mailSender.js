@@ -4,10 +4,8 @@ const createTransporter = () => {
   return nodemailer.createTransport({
     service: 'gmail',  
     auth: {
-    //   user: 'placementconnect9@gmail.com',  
-    //   pass: 'vbxp xoql egds euuf'      
-    user:process.env.user,
-    pass:process.env.pass
+       user: 'placementconnect9@gmail.com',  
+       pass: 'vbxp xoql egds euuf'      
     }
   });
 };
